@@ -8,7 +8,7 @@
         // دالة لتحميل ملف CSV ومعالجته مع التعامل مع الأخطاء
         async function loadCSV() {
             try {
-                const response = await fetch('students.csv'); // رابط ملف CSV
+                const response = await fetch('Student_IDs_and_Access_Codes.csv'); // رابط ملف CSV
                 if (!response.ok) {
                     throw new Error('خطأ في تحميل ملف CSV.');
                 }
