@@ -4,38 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صفحة الحصول على Access Code</title>
-    
     <script>
-        // دالة لتحميل ملف CSV ومعالجته
+        // دالة لتحميل ملف CSV ومعالجته مع التعامل مع الأخطاء
         async function loadCSV() {
             try {
-                const response = await fetch('Student_IDs_and_Access_Codes.csv'); // رابط ملف CSV
+                const response = await fetch('students.csv'); // رابط ملف CSV
                 if (!response.ok) {
-                    throw new Error(`خطأ في تحميل الملف: ${response.status} ${response.statusText}`);
+                    throw new Error('خطأ في تحميل ملف CSV.');
                 }
                 const data = await response.text();
-                const studentsData = parseCSV(data);
-                return studentsData;
+                return parseCSV(data);
             } catch (error) {
-                console.error('خطأ أثناء تحميل ملف CSV:', error);
-                throw error;
+                document.getElementById("result").innerHTML = `حدث خطأ أثناء تحميل الملف: ${error.message}`;
+                return [];
             }
         }
 
         // دالة لتحويل CSV إلى كائنات JavaScript
         function parseCSV(data) {
-            const lines = data.trim().split('\n');
+            const lines = data.split('\n');
             const result = [];
-            const headers = lines[0].split(',').map(header => header.trim());
-
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].split(',');
-                if (line.length === headers.length) {
-                    const student = {};
-                    for (let j = 0; j < headers.length; j++) {
-                        student[headers[j]] = line[j].trim();
-                    }
-                    result.push(student);
+                if (line.length === 2) {
+                    result.push({
+                        ZipGradeID: line[0].trim(),
+                        AccessCode: line[1].trim()
+                    });
                 }
             }
             return result;
@@ -43,54 +38,22 @@
 
         // دالة للبحث عن Access Code
         async function getAccessCode() {
-            const studentID = document.getElementById("studentID").value.trim();
-            const resultElement = document.getElementById("result");
-
-            if (studentID === "") {
-                resultElement.innerHTML = "يرجى إدخال رقم الطالب.";
-                return;
+            const studentID = document.getElementById("studentID").value;
+            const studentsData = await loadCSV();
+            if (studentsData.length === 0) {
+                return; // تم معالجة الخطأ بالفعل في دالة loadCSV
             }
-
-            try {
-                const studentsData = await loadCSV();
-                const student = studentsData.find(s => s.ZipGradeID === studentID);
-                
-                if (student) {
-                    document.getElementById("result").innerHTML = `كود الوصول الخاص بك هو:<br><strong>${student.AccessCode}</strong>`;
-                } else {
-                    resultElement.innerHTML = "لم يتم العثور على رقم الطالب.";
-                }
-            } catch (error) {
-                resultElement.innerHTML = "حدث خطأ أثناء تحميل البيانات. يرجى المحاولة لاحقًا.";
+            const student = studentsData.find(s => s.ZipGradeID === studentID);
+            
+            if (student) {
+                document.getElementById("result").innerHTML = `كود الوصول الخاص بك هو:<br><strong>${student.AccessCode}</strong>`;
+            } else {
+                document.getElementById("result").innerHTML = "لم يتم العثور على رقم الطالب.";
             }
         }
     </script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding-top: 50px;
-            background-color: #f0f0f0;
-        }
-        input {
-            padding: 10px;
-            width: 200px;
-            font-size: 16px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-        #result {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
-        }
-    </style>
 </head>
-<body>
+<body style="text-align: center;">
     <h2>أدخل رقم الطالب للحصول على <br><span dir="ltr">Access Code</span></h2>
     <input type="text" id="studentID" placeholder="أدخل رقم الطالب">
     <button onclick="getAccessCode()">الحصول على الكود</button>
