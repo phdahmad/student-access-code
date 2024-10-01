@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة الحصول على Access Code</title>
+    <script>
+        // دالة لتحميل ملف CSV ومعالجته
+        async function loadCSV() {
+            const response = await fetch('Student_IDs_and_Access_Codes.csv'); // رابط ملف CSV
+            const data = await response.text();
+            const studentsData = parseCSV(data);
+            return studentsData;
+        }
+
+        // دالة لتحويل CSV إلى كائنات JavaScript
+        function parseCSV(data) {
+            const lines = data.split('\n');
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].split(',');
+                if (line.length === 2) {
+                    result.push({
+                        ZipGradeID: line[0].trim(),
+                        AccessCode: line[1].trim()
+                    });
+                }
+            }
+            return result;
+        }
+
+        // دالة للبحث عن Access Code
+        async function getAccessCode() {
+            const studentID = document.getElementById("studentID").value;
+            const studentsData = await loadCSV();
+            const student = studentsData.find(s => s.ZipGradeID === studentID);
+            
+            if (student) {
+                document.getElementById("result").innerHTML = `كود الوصول الخاص بك هو: ${student.AccessCode}`;
+            } else {
+                document.getElementById("result").innerHTML = "لم يتم العثور على رقم الطالب.";
+            }
+        }
+    </script>
+</head>
+<body style="text-align: center;">
+    <h2>أدخل رقم الطالب للحصول على Access Code</h2>
+    <input type="text" id="studentID" placeholder="أدخل رقم الطالب">
+    <button onclick="getAccessCode()">الحصول على الكود</button>
+    <p id="result"></p>
+</body>
+</html>
 
