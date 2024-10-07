@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة إدارة Access Code</title>
+    <script>
+        // دالة لتحميل ملف CSV ومعالجته مع التعامل مع الأخطاء
+        async function loadCSV() {
+            try {
+                const response = await fetch('Student_IDs_and_Access_Codes.csv'); // رابط ملف CSV
+                if (!response.ok) {
+                    throw new Error('خطأ في تحميل ملف CSV.');
+                }
+                const data = await response.text();
+                return parseCSV(data);
+            } catch (error) {
+                document.getElementById("result").innerHTML = `حدث خطأ أثناء تحميل الملف: ${error.message}`;
+                return [];
+            }
+        }
+
+        // دالة لتحويل CSV إلى كائنات JavaScript
+        function parseCSV(data) {
+            const lines = data.split('\n');
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].split(',');
+                if (line.length === 2) {
+                    result.push({
+                        ZipGradeID: line[0].trim(),
+                        AccessCode: line[1].trim()
+                    });
+                }
+            }
+            return result;
+        }
+
+        // دالة للبحث عن Access Code
+        async function getAccessCode() {
+            const studentID = document.getElementById("studentID").value;
+            const studentsData = await loadCSV();
+            if (studentsData.length === 0) {
+                return; // تم معالجة الخطأ بالفعل في دالة loadCSV
+            }
+            const student = studentsData.find(s => s.ZipGradeID === studentID);
+            
+            if (student) {
+                document.getElementById("result").innerHTML = `كود الوصول الخاص بك هو:<br><strong>${student.AccessCode}</strong>`;
+            } else {
+                document.getElementById("result").innerHTML = "لم يتم العثور على رقم الطالب.";
+            }
+        }
+
+        // دالة لإضافة أو تعديل Access Code
+        async function addOrUpdateAccessCode() {
+            const studentID = document.getElementById("newStudentID").value;
+            const accessCode = document.getElementById("newAccessCode").value;
+            const studentsData = await loadCSV();
+
+            // البحث إذا كان الطالب موجودًا في البيانات
+            const studentIndex = studentsData.findIndex(s => s.ZipGradeID === studentID);
+
+            if (studentIndex !== -1) {
+                // تحديث الكود إذا كان الطالب موجودًا
+                studentsData[studentIndex].AccessCode = accessCode;
+                document.getElementById("updateResult").innerHTML = "تم تحديث كود الوصول بنجاح.";
+            } else {
+                // إضافة طالب جديد إذا لم يكن موجودًا
+                studentsData.push({ ZipGradeID: studentID, AccessCode: accessCode });
+                document.getElementById("updateResult").innerHTML = "تم إضافة الطالب وكود الوصول بنجاح.";
+            }
+
+            // حفظ البيانات المعدلة إلى ملف CSV
+            saveCSV(studentsData);
+        }
+
+        // دالة لحفظ البيانات المعدلة في ملف CSV
+        function saveCSV(studentsData) {
+            let csvContent = "ZipGradeID,AccessCode\n";
+            studentsData.forEach(student => {
+                csvContent += `${student.ZipGradeID},${student.AccessCode}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Student_IDs_and_Access_Codes.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</head>
+<body style="text-align: center;">
+    <h2>أدخل رقم الطالب للحصول على <br><span dir="ltr">Access Code</span></h2>
+    <input type="text" id="studentID" placeholder="أدخل رقم الطالب">
+    <button onclick="getAccessCode()">الحصول على الكود</button>
+    <p id="result"></p>
+
+    <h2>إضافة أو تعديل <span dir="ltr">Access Code</span></h2>
+    <input type="text" id="newStudentID" placeholder="أدخل رقم الطالب الجديد">
+    <input type="text" id="newAccessCode" placeholder="أدخل كود الوصول الجديد">
+    <button onclick="addOrUpdateAccessCode()">إضافة/تعديل الكود</button>
+    <p id="updateResult"></p>
+</body>
+</html>
 
