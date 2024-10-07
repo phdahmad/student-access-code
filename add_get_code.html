@@ -3,48 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة إدارة Access Code</title>
+    <title>صفحة إدارة Access Code باستخدام Google Sheets</title>
     <script>
-        // دالة لتحميل ملف CSV ومعالجته مع التعامل مع الأخطاء
-        async function loadCSV() {
+        const SHEETDB_API_URL = 'https://sheetdb.io/api/v1/guto0jg4putip'; // الـ endpoint الخاص بك
+
+        // دالة لتحميل البيانات من Google Sheets باستخدام SheetDB API
+        async function loadSheetData() {
             try {
-                const response = await fetch('Student_IDs_and_Access_Codes.csv'); // رابط ملف CSV
-                if (!response.ok) {
-                    throw new Error('خطأ في تحميل ملف CSV.');
-                }
-                const data = await response.text();
-                return parseCSV(data);
+                const response = await fetch(SHEETDB_API_URL);
+                const data = await response.json();
+                return data;
             } catch (error) {
-                document.getElementById("result").innerHTML = `حدث خطأ أثناء تحميل الملف: ${error.message}`;
+                document.getElementById("result").innerHTML = `حدث خطأ أثناء تحميل البيانات: ${error.message}`;
                 return [];
             }
-        }
-
-        // دالة لتحويل CSV إلى كائنات JavaScript
-        function parseCSV(data) {
-            const lines = data.split('\n');
-            const result = [];
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].split(',');
-                if (line.length === 2) {
-                    result.push({
-                        ZipGradeID: line[0].trim(),
-                        AccessCode: line[1].trim()
-                    });
-                }
-            }
-            return result;
         }
 
         // دالة للبحث عن Access Code
         async function getAccessCode() {
             const studentID = document.getElementById("studentID").value;
-            const studentsData = await loadCSV();
-            if (studentsData.length === 0) {
-                return; // تم معالجة الخطأ بالفعل في دالة loadCSV
-            }
+            const studentsData = await loadSheetData();
             const student = studentsData.find(s => s.ZipGradeID === studentID);
-            
+
             if (student) {
                 document.getElementById("result").innerHTML = `كود الوصول الخاص بك هو:<br><strong>${student.AccessCode}</strong>`;
             } else {
@@ -52,43 +32,66 @@
             }
         }
 
-        // دالة لإضافة أو تعديل Access Code
+        // دالة لإضافة أو تعديل Access Code باستخدام SheetDB API
         async function addOrUpdateAccessCode() {
             const studentID = document.getElementById("newStudentID").value;
             const accessCode = document.getElementById("newAccessCode").value;
-            const studentsData = await loadCSV();
-
-            // البحث إذا كان الطالب موجودًا في البيانات
+            const studentsData = await loadSheetData();
             const studentIndex = studentsData.findIndex(s => s.ZipGradeID === studentID);
 
             if (studentIndex !== -1) {
                 // تحديث الكود إذا كان الطالب موجودًا
                 studentsData[studentIndex].AccessCode = accessCode;
                 document.getElementById("updateResult").innerHTML = "تم تحديث كود الوصول بنجاح.";
+                await updateSheetData(studentID, accessCode);
             } else {
                 // إضافة طالب جديد إذا لم يكن موجودًا
                 studentsData.push({ ZipGradeID: studentID, AccessCode: accessCode });
                 document.getElementById("updateResult").innerHTML = "تم إضافة الطالب وكود الوصول بنجاح.";
+                await addNewStudentToSheet(studentID, accessCode);
             }
-
-            // حفظ البيانات المعدلة إلى ملف CSV
-            saveCSV(studentsData);
         }
 
-        // دالة لحفظ البيانات المعدلة في ملف CSV
-        function saveCSV(studentsData) {
-            let csvContent = "ZipGradeID,AccessCode\n";
-            studentsData.forEach(student => {
-                csvContent += `${student.ZipGradeID},${student.AccessCode}\n`;
-            });
+        // دالة لإضافة طالب جديد إلى Google Sheets باستخدام SheetDB API
+        async function addNewStudentToSheet(studentID, accessCode) {
+            try {
+                const response = await fetch(SHEETDB_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: [{ ZipGradeID: studentID, AccessCode: accessCode }] })
+                });
 
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'Student_IDs_and_Access_Codes.csv';
-            a.click();
-            URL.revokeObjectURL(url);
+                if (response.ok) {
+                    console.log('تمت الإضافة بنجاح');
+                } else {
+                    console.error('خطأ في إضافة الطالب');
+                }
+            } catch (error) {
+                console.error(`حدث خطأ أثناء الإضافة: ${error.message}`);
+            }
+        }
+
+        // دالة لتحديث بيانات الطالب في Google Sheets باستخدام SheetDB API
+        async function updateSheetData(studentID, accessCode) {
+            try {
+                const response = await fetch(`${SHEETDB_API_URL}/ZipGradeID/${studentID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: { AccessCode: accessCode } })
+                });
+
+                if (response.ok) {
+                    console.log('تم التحديث بنجاح');
+                } else {
+                    console.error('خطأ في تحديث الطالب');
+                }
+            } catch (error) {
+                console.error(`حدث خطأ أثناء التحديث: ${error.message}`);
+            }
         }
     </script>
 </head>
@@ -105,4 +108,3 @@
     <p id="updateResult"></p>
 </body>
 </html>
-
